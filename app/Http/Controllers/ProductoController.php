@@ -10,19 +10,61 @@ class ProductoController extends Controller
 
     public function index()
     {
-        $response = Http::get($this->api);
+        try {
 
-        $productos = $response->json();
+            $response = Http::get($this->api);
 
-        return view('productos.index', compact('productos'));
+            if (!$response->successful()) {
+
+                return back()->with(
+                    'error',
+                    'No se pudieron cargar los productos'
+                );
+            }
+
+            $productos = $response->json();
+
+            return view(
+                'productos.index',
+                compact('productos')
+            );
+
+        } catch (\Exception $e) {
+
+            return back()->with(
+                'error',
+                'Error de conexión: ' . $e->getMessage()
+            );
+        }
     }
 
     public function show($id)
     {
-        $response = Http::get($this->api . '/' . $id);
+        try {
 
-        $producto = $response->json();
+            $response = Http::get($this->api . '/' . $id);
 
-        return view('productos.show', compact('producto'));
+            if (!$response->successful()) {
+
+                return back()->with(
+                    'error',
+                    'Producto no encontrado'
+                );
+            }
+
+            $producto = $response->json();
+
+            return view(
+                'productos.show',
+                compact('producto')
+            );
+
+        } catch (\Exception $e) {
+
+            return back()->with(
+                'error',
+                'Error de conexión: ' . $e->getMessage()
+            );
+        }
     }
 }

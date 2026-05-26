@@ -8,9 +8,10 @@ use Srmklive\PayPal\Services\PayPal as PayPalClient;
 
 class PaymentController extends Controller
 {
+    private $api = 'https://apihotel21-production.up.railway.app/api';
+
     public function pay($orderId)
     {
-        
         $token = session('token');
 
         $usuario = session('usuario');
@@ -23,7 +24,7 @@ class PaymentController extends Controller
         }
 
         $response = Http::withToken($token)
-            ->get("http://127.0.0.1:8000/api/orders/$userId/$orderId");
+            ->get($this->api . "/orders/$userId/$orderId");
 
         if (!$response->successful()) {
 
@@ -83,15 +84,17 @@ class PaymentController extends Controller
 
         $response = $provider->capturePaymentOrder($request['token']);
 
-        if (isset($response['status']) &&
-            $response['status'] == 'COMPLETED') {
+        if (
+            isset($response['status']) &&
+            $response['status'] == 'COMPLETED'
+        ) {
 
             $transactionId = $response['id'];
 
             $token = session('token');
 
             Http::withToken($token)
-                ->put("http://127.0.0.1:8000/api/orders/$orderId/payment", [
+                ->put($this->api . "/orders/$orderId/payment", [
 
                     'transaction_id' => $transactionId,
 

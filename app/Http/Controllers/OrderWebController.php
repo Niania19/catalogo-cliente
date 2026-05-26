@@ -7,12 +7,15 @@ use Illuminate\Support\Facades\Http;
 
 class OrderWebController extends Controller
 {
+    private $api = 'https://apihotel21-production.up.railway.app/api';
+
     // 🔒 Validación de sesión reutilizable
     private function checkSession()
     {
         if (!session()->has('token') || !session()->has('usuario')) {
             return redirect('/login')->with('error', 'Debes iniciar sesión primero');
         }
+
         return null;
     }
 
@@ -26,13 +29,15 @@ class OrderWebController extends Controller
         $userId = $usuario['id_cliente'] ?? $usuario['id'];
 
         $response = Http::withToken($token)
-            ->get("http://127.0.0.1:8000/api/orders/$userId");
+            ->get($this->api . "/orders/$userId");
 
         if (!$response->successful()) {
-            return redirect('/carrito')->with('error', 'No se pudieron cargar los pedidos');
+            return redirect('/carrito')
+                ->with('error', 'No se pudieron cargar los pedidos');
         }
 
-        $orders = $response->json(); 
+        $orders = $response->json();
+
         return view('orders.index', compact('orders'));
     }
 
@@ -46,38 +51,42 @@ class OrderWebController extends Controller
         $userId = $usuario['id_cliente'] ?? $usuario['id'];
 
         $response = Http::withToken($token)
-            ->get("http://127.0.0.1:8000/api/orders/{$userId}/{$orderId}");
+            ->get($this->api . "/orders/{$userId}/{$orderId}");
 
         if ($response->failed()) {
-            return redirect()->route('perfil')->with('error', 'No se pudo obtener el detalle del pedido.');
+            return redirect()->route('perfil')
+                ->with('error', 'No se pudo obtener el detalle del pedido.');
         }
 
         $order = $response->json();
 
         if (!isset($order['id'])) {
-            return redirect()->route('perfil')->with('error', 'El pedido no existe.');
+            return redirect()->route('perfil')
+                ->with('error', 'El pedido no existe.');
         }
 
         return view('orders.show', compact('order'));
     }
 
     // ❌ CANCELAR PEDIDO
-   public function cancel($orderId)
-{
-    $usuario = session('usuario');
-    $token = session('token');
-    $userId = $usuario['id_cliente'] ?? $usuario['id'];
+    public function cancel($orderId)
+    {
+        $usuario = session('usuario');
+        $token = session('token');
+        $userId = $usuario['id_cliente'] ?? $usuario['id'];
 
-    $response = Http::withToken($token)
-        ->put("http://127.0.0.1:8000/api/orders/{$userId}/{$orderId}/cancel");
+        $response = Http::withToken($token)
+            ->put($this->api . "/orders/{$userId}/{$orderId}/cancel");
 
-    // SI NO ES EXITOSO, MOSTRAR EL ERROR REAL DE PHP
-    if (!$response->successful()) {
-        return response($response->body()); // Esto abrirá una pantalla blanca con el error real
+        if (!$response->successful()) {
+
+            return redirect()->route('perfil')
+                ->with('error', 'No se pudo cancelar el pedido.');
+        }
+
+        return redirect()->route('perfil')
+            ->with('success', 'Pedido cancelado.');
     }
-
-    return redirect()->route('perfil')->with('success', 'Pedido cancelado.');
-}
 
     // 🛒 CREAR PEDIDO
     public function store()
@@ -89,13 +98,15 @@ class OrderWebController extends Controller
         $cart = session()->get('cart', []);
 
         if (empty($cart)) {
-            return redirect()->back()->with('error', 'El carrito está vacío');
+            return redirect()->back()
+                ->with('error', 'El carrito está vacío');
         }
 
         $userId = $usuario['id_cliente'] ?? $usuario['id'];
         $items = [];
 
         foreach ($cart as $id => $item) {
+
             $items[] = [
                 'product_id' => (int) $id,
                 'quantity'   => (int) $item['quantity'],
@@ -104,27 +115,37 @@ class OrderWebController extends Controller
         }
 
         try {
+
             $response = Http::withToken($token)
-                ->post('http://127.0.0.1:8000/api/orders', [
-                    'user_id' => $userId, 
+                ->post($this->api . '/orders', [
+                    'user_id' => $userId,
                     'items' => $items
                 ]);
 
             if (!$response->successful()) {
-                dd(['Codigo_Error'=>$response->status(),
-                'Respuesta_API'=>$response->body(),
-                'URL_Consulta'=>"http://127.0.0.1:8000/api/orders/{userID}/{orderID}/cancel"]);
-                $mensaje = $response->json()['message'] ?? 'Error en la API al crear el pedido';
-                return redirect()->back()->with('error', $mensaje);
+
+                $mensaje = $response->json()['message']
+                    ?? 'Error en la API al crear el pedido';
+
+                return redirect()->back()
+                    ->with('error', $mensaje);
             }
 
             session()->forget('cart');
 
             return redirect()->route('perfil')
-                ->with('success', '¡Pedido creado con éxito! El stock ha sido actualizado.');
+                ->with(
+                    'success',
+                    '¡Pedido creado con éxito! El stock ha sido actualizado.'
+                );
 
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Conexión fallida: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->with(
+                    'error',
+                    'Conexión fallida: ' . $e->getMessage()
+                );
         }
     }
-} // Esta es la llave que cierra la clase
+}
