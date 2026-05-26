@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Http;
 
 class ClienteAuthController extends Controller
 {
-    private $api = 'http://127.0.0.1:8000/api';
+    private $api = 'https://apihotel21-production.up.railway.app/api';
 
     public function showLogin()
     {
@@ -43,8 +43,10 @@ class ClienteAuthController extends Controller
             ]);
 
             return redirect()->route('login')
-                ->with('success',
-                    'Registro exitoso. Inicia sesión.');
+                ->with(
+                    'success',
+                    'Registro exitoso. Inicia sesión.'
+                );
         }
 
         return back()->withErrors([
@@ -56,7 +58,7 @@ class ClienteAuthController extends Controller
     public function login(Request $request)
     {
         $response = Http::post(
-            'http://127.0.0.1:8000/api/cliente/login',
+            $this->api . '/cliente/login',
             [
                 'correo' => $request->correo,
                 'password' => $request->password
@@ -83,7 +85,6 @@ class ClienteAuthController extends Controller
 
     public function perfil()
     {
-        // Verificar sesión
         if (!session()->has('usuario')) {
 
             return redirect()->route('login');
@@ -92,14 +93,12 @@ class ClienteAuthController extends Controller
         $usuario = session('usuario');
         $token = session('token');
 
-        // Obtener ID del cliente
         $userId = $usuario['id_cliente'];
 
-        // Obtener pedidos
         try {
 
             $response = Http::withToken($token)
-                ->get("http://127.0.0.1:8000/api/orders/{$userId}");
+                ->get($this->api . "/orders/{$userId}");
 
             $orders = $response->successful()
                 ? $response->json()
@@ -121,7 +120,7 @@ class ClienteAuthController extends Controller
         if (session()->has('token')) {
 
             Http::withToken(session('token'))
-                ->post('http://127.0.0.1:8000/api/cliente/logout');
+                ->post($this->api . '/cliente/logout');
         }
 
         session()->forget([

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Http;
 
 class ProductoController extends Controller
 {
-    private $api = 'http://127.0.0.1:8000/api/productos';
+    private $api = 'https://apihotel21-production.up.railway.app/api/productos';
 
     public function index()
     {
